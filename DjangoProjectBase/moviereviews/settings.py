@@ -17,6 +17,15 @@ from pathlib import Path
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+try:
+    from dotenv import load_dotenv
+    load_dotenv(BASE_DIR / 'openAI.env')
+except Exception:
+    pass
+
+import os as _os
+OPENAI_API_KEY = _os.environ.get('openai_apikey') or _os.environ.get('OPENAI_API_KEY', '')
+
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 MEDIA_URL = '/media/'
 
@@ -30,7 +39,7 @@ SECRET_KEY = 'django-insecure-+9jg)*p09$at+zck$n-6*djf=34w4sc*m##^fmph4pb$_nh%xb
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['34.230.71.87']
+ALLOWED_HOSTS = ['LAPTOP-9K5QG8F7', 'localhost', '127.0.0.1']
 
 
 # Application definition

@@ -123,3 +123,65 @@ def generate_bar_chart(data, xlabel, ylabel):
     buffer.close()
     graphic = base64.b64encode(image_png).decode('utf-8')
     return graphic
+
+def recommend(request):
+    recommended_movie = None
+    prompt = None
+    error = None
+
+    if request.method == 'POST':
+        prompt = request.POST.get('prompt', '').strip()
+        if prompt:
+            try:
+                from openai import OpenAI
+                import numpy as np
+                import os
+                from pathlib import Path
+
+                # Leer el .env manualmente
+                BASE_DIR = Path(__file__).resolve().parent.parent.parent
+                env_file = BASE_DIR / 'openAI.env'
+                api_key = ''
+                if env_file.exists():
+                    for line in env_file.read_text().splitlines():
+                        line = line.strip()
+                        if '=' in line and not line.startswith('#'):
+                            k, v = line.split('=', 1)
+                            if k.strip().lower() in ('openai_apikey', 'openai_api_key'):
+                                api_key = v.strip()
+                                break
+
+                client = OpenAI(api_key=api_key)
+
+                # Generate embedding for the prompt
+                response = client.embeddings.create(
+                    input=[prompt],
+                    model="text-embedding-3-small"
+                )
+                prompt_emb = np.array(response.data[0].embedding, dtype=np.float32)
+
+                # Cosine similarity
+                def cosine_similarity(a, b):
+                    return np.dot(a, b) / (np.linalg.norm(a) * np.linalg.norm(b))
+
+                best_movie = None
+                max_similarity = -1
+
+                for movie in Movie.objects.all():
+                    if movie.emb:
+                        movie_emb = np.frombuffer(bytes(movie.emb), dtype=np.float32)
+                        if movie_emb.shape[0] > 0:
+                            similarity = cosine_similarity(prompt_emb, movie_emb)
+                            if similarity > max_similarity:
+                                max_similarity = similarity
+                                best_movie = movie
+
+                recommended_movie = best_movie
+            except Exception as e:
+                error = str(e)
+
+    return render(request, 'recommend.html', {
+        'prompt': prompt,
+        'recommended_movie': recommended_movie,
+        'error': error,
+    })
